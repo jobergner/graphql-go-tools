@@ -4,8 +4,7 @@ import (
 	"github.com/jensneuse/graphql-go-tools/pkg/ast"
 )
 
-const SchemaExample = `
-schema {
+const SchemaExample = `schema {
     query: Query
 }
 
@@ -20,43 +19,97 @@ interface Character {
 
 type Droid implements Character {
     name: String!
+}`
+
+type testSchemaBuilder struct {
+	doc      *ast.Document
+	typeRefs typeRefs
 }
-`
 
-func BuildAst() *ast.Document {
-	doc := ast.NewDocument()
+type typeRefs struct {
+	characterType     int
+	stringNonNullType int
+	idNonNullType     int
+	droidNonNullType  int
+}
 
-	doc.ImportSchemaDefinition("Query", "", "")
+func (t *testSchemaBuilder) importSchemaDefinition() {
+	t.doc.ImportSchemaDefinition("Query", "", "")
+}
 
-	//
-	//  Query type imports
-	//
+func (t *testSchemaBuilder) importQueryDroidFieldDefinition() int {
+	// droid (field)
+	droidFieldDefRef := t.doc.ImportFieldDefinition(
+		"droid", "", t.typeRefs.droidNonNullType, nil, nil)
 
+	return droidFieldDefRef
+}
+
+func (t *testSchemaBuilder) importQueryHeroFieldDefinition() int {
+
+	nonNullIDInputValueDefinitionRef := t.doc.ImportInputValueDefinition("id", "", t.typeRefs.idNonNullType, ast.DefaultValue{})
+
+	// hero (field)
+	characterFieldDefRef := t.doc.ImportFieldDefinition(
+		"hero", "", t.typeRefs.characterType, []int{nonNullIDInputValueDefinitionRef}, nil)
+
+	return characterFieldDefRef
+}
+
+func (t *testSchemaBuilder) importQueryDefinition() {
 	queryTypeFieldDefRefs := make([]int, 0, 2)
 
-	// add Query droid fieldCount types
-	droidNamedTypeRef := doc.AddNamedType([]byte("Droid"))
-	droidNonNullType := ast.Type{
-		TypeKind: ast.TypeKindNonNull,
-		OfType:   droidNamedTypeRef,
-	}
+	queryTypeFieldDefRefs = append(queryTypeFieldDefRefs, t.importQueryDroidFieldDefinition())
+	queryTypeFieldDefRefs = append(queryTypeFieldDefRefs, t.importQueryHeroFieldDefinition())
 
-	droidNonNullTypeRef := doc.AddType(droidNonNullType)
-
-	droidFieldDefRef := doc.ImportFieldDefinition(
-		"droid", "", droidNonNullTypeRef, nil, nil)
-
-	queryTypeFieldDefRefs = append(queryTypeFieldDefRefs, droidFieldDefRef)
-
-	// add Query hero fieldCount
-
-	// add Query object type definition
-
-	doc.ImportObjectTypeDefinition(
+	t.doc.ImportObjectTypeDefinition(
 		"Query",
 		"",
 		queryTypeFieldDefRefs,
 		nil)
+}
 
-	return doc
+func (t *testSchemaBuilder) nameNonNullStringField() int {
+
+	nameFieldDefRef := t.doc.ImportFieldDefinition(
+		"name", "", t.typeRefs.stringNonNullType, nil, nil)
+
+	return nameFieldDefRef
+}
+
+func (t *testSchemaBuilder) importCharacterDefinition() {
+
+	nameFieldDefRef := t.nameNonNullStringField()
+
+	t.doc.ImportInterfaceTypeDefinition("Character", "", []int{nameFieldDefRef})
+}
+
+func (t *testSchemaBuilder) importDroidDefinition() {
+	nameFieldDefRef := t.nameNonNullStringField()
+
+	t.doc.ImportObjectTypeDefinition("Droid", "", []int{nameFieldDefRef}, []int{t.typeRefs.characterType})
+}
+
+func BuildAst() *ast.Document {
+	doc := ast.NewDocument()
+
+	schemaBuilder := testSchemaBuilder{
+		doc: doc,
+		typeRefs: typeRefs{
+			characterType:     doc.AddNamedType([]byte("Character")),
+			stringNonNullType: doc.AddNonNullNamedType([]byte("String")),
+			idNonNullType:     doc.AddNonNullNamedType([]byte("ID")),
+			droidNonNullType:  doc.AddNonNullNamedType([]byte("Droid")),
+		},
+	}
+
+	schemaBuilder.importSchemaDefinition()
+
+	schemaBuilder.importQueryDefinition()
+
+	schemaBuilder.importCharacterDefinition()
+
+	schemaBuilder.importDroidDefinition()
+
+	return schemaBuilder.doc
 }

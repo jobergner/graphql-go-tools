@@ -15,12 +15,12 @@ func TestGatherDocumentStats(t *testing.T) {
 	require.False(t, report.HasErrors())
 
 	documentStats := GatherDocumentStats(&definition, &report)
-	sort.Strings(documentStats.uniqFieldNames)
+	sort.Strings(documentStats.uniqueFieldNames)
 	sort.Strings(documentStats.objectTypesNames)
 	sort.Strings(documentStats.enumValues)
 
 	expectedStats := &DocumentStats{
-		uniqFieldNames: []string{
+		uniqueFieldNames: []string{
 			"commentary",
 			"createReview",
 			"droid",
@@ -49,6 +49,7 @@ func TestGatherDocumentStats(t *testing.T) {
 			"JEDI",
 			"NEWHOPE",
 		},
+		stringFieldCount: 9,
 	}
 
 	assert.Equal(t, expectedStats, documentStats)

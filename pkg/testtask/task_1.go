@@ -75,7 +75,7 @@ type StringFieldStats struct {
 
 func GatherStringFieldsStats(doc *ast.Document, report *operationreport.Report) *StringFieldStats {
 	walker := astvisitor.NewWalker(48)
-	visitor := &StringFieldsStats{
+	visitor := &StringFieldsStatsVisitor{
 		Walker: &walker,
 	}
 
@@ -98,21 +98,22 @@ func GatherStringFieldsStats(doc *ast.Document, report *operationreport.Report) 
 	}
 }
 
-type StringFieldsStats struct {
+type StringFieldsStatsVisitor struct {
 	*astvisitor.Walker
 	definition *ast.Document
 	fieldNames map[string]struct{}
 	fieldCount int
 }
 
-func (v *StringFieldsStats) EnterFieldDefinition(ref int) {
+func (v *StringFieldsStatsVisitor) EnterFieldDefinition(ref int) {
 	fieldTypeRef := v.definition.FieldDefinitionType(ref)
 	fieldType := v.definition.Types[fieldTypeRef]
 
 	switch fieldType.TypeKind {
 	case ast.TypeKindNamed:
-		if v.definition.TypeNameString(fieldTypeRef) == "Int" {
+		if v.definition.TypeNameString(fieldTypeRef) == "String" {
 			v.fieldCount++
+			v.fieldNames[v.definition.FieldDefinitionNameString(ref)] = struct{}{}
 		}
 	case ast.TypeKindNonNull:
 		if v.definition.TypeNameString(fieldType.OfType) == "String" {
@@ -122,7 +123,7 @@ func (v *StringFieldsStats) EnterFieldDefinition(ref int) {
 	}
 }
 
-func (v *StringFieldsStats) EnterDocument(operation, _ *ast.Document) {
+func (v *StringFieldsStatsVisitor) EnterDocument(operation, _ *ast.Document) {
 	v.definition = operation
 	v.fieldNames = make(map[string]struct{})
 }

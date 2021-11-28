@@ -88,7 +88,7 @@ func GatherStringFieldsStats(doc *ast.Document, report *operationreport.Report) 
 	// obtain results
 
 	var fieldNames []string
-	for s, _ := range visitor.fieldNames {
+	for s := range visitor.fieldNames {
 		fieldNames = append(fieldNames, s)
 	}
 
